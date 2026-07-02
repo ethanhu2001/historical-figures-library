@@ -74,7 +74,7 @@ class Convener:
         return self.llm.complete(
             system=CONVENER_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1024,
+            max_tokens=2000,
         )
 
 

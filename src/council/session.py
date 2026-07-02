@@ -75,7 +75,7 @@ class Session:
         return self.convener.llm.complete(
             system=figure.system_prompt,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=600,
+            max_tokens=1200,
         )
 
     def _record(self, speaker: str, text: str, on_turn: OnTurn | None) -> None:
