@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+from council.convener import MIN_FIGURES, Convener
+from council.figure import Figure
+
+
+class FakeLLM:
+    def __init__(self, replies):
+        self._replies = iter(replies)
+
+    def complete(self, system, messages, max_tokens=1024):
+        return next(self._replies)
+
+
+def make_figures(*names):
+    return [
+        Figure(slug=n.lower().replace(" ", "-"), name=n, worldview="w", system_prompt="p")
+        for n in names
+    ]
+
+
+def test_select_figures_parses_comma_separated_names():
+    council = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    convener = Convener(llm=FakeLLM(["Marcus Aurelius, Warren Buffett, Ray Dalio"]), council=council)
+
+    selected = convener.select_figures("Should I take this job?")
+
+    assert [f.name for f in selected] == ["Marcus Aurelius", "Warren Buffett", "Ray Dalio"]
+
+
+def test_select_figures_tops_up_to_minimum_when_reply_is_short():
+    council = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    convener = Convener(llm=FakeLLM(["Marcus Aurelius"]), council=council)
+
+    selected = convener.select_figures("A narrow question")
+
+    assert len(selected) == MIN_FIGURES
+    assert selected[0].name == "Marcus Aurelius"
+
+
+def test_choose_next_speaker_returns_none_on_end():
+    council = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(llm=FakeLLM(["END\nDebate has run its course."]), council=council)
+
+    assert convener.choose_next_speaker(council, "transcript") is None
+
+
+def test_choose_next_speaker_matches_named_figure():
+    council = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(
+        llm=FakeLLM(["Warren Buffett\nHe should respond to the point about risk."]),
+        council=council,
+    )
+
+    speaker = convener.choose_next_speaker(council, "transcript")
+
+    assert speaker.name == "Warren Buffett"
