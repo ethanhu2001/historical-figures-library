@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import typer
+from dotenv import load_dotenv
 
 from council.convener import Convener
 from council.figure import load_figures
 from council.llm import LLMClient
 from council.session import Session
 from council.transcript import save_transcript
+
+load_dotenv()
 
 app = typer.Typer(help="Convene the Council to debate a question.")
 
