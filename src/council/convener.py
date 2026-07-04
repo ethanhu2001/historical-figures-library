@@ -47,7 +47,12 @@ class Convener:
             "list of their exact names, nothing else."
         )
         reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=200)
-        selected = _match_names(reply, self.council)
+        by_name = _figures_by_name(self.council)
+        selected = []
+        for token in reply.split(","):
+            figure = by_name.get(token.strip().casefold())
+            if figure and figure not in selected:
+                selected.append(figure)
         if len(selected) < MIN_FIGURES:
             remaining = [f for f in self.council if f not in selected]
             selected += remaining[: MIN_FIGURES - len(selected)]
@@ -58,18 +63,16 @@ class Convener:
         prompt = (
             f"Seated Council members: {roster_desc}\n\n"
             f"Transcript so far:\n{transcript}\n\n"
-            "Who should speak next, and why? If the debate has run its course, "
-            "reply with exactly END instead of a name. Reply with the figure's "
-            "exact name (or END) on the first line, then a one-sentence reason "
-            "on the second line."
+            "Who should speak next? If the debate has run its course, reply with "
+            "exactly END instead of a name. Reply with ONLY the figure's exact "
+            "name (or END), nothing else."
         )
         reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=100)
-        stripped = reply.strip()
-        first_line = stripped.splitlines()[0].strip() if stripped else ""
-        if first_line.upper() == "END":
+        decoded = reply.strip().casefold()
+        if decoded == "end":
             return None
-        matches = _match_names(first_line, seated)
-        return matches[0] if matches else seated[0]
+        by_name = _figures_by_name(seated)
+        return by_name.get(decoded, seated[0])
 
     def synthesize(self, transcript: str) -> str:
         prompt = (
@@ -82,10 +85,5 @@ class Convener:
         return self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=2000)
 
 
-def _match_names(text: str, figures: list[Figure]) -> list[Figure]:
-    matched = []
-    lowered = text.lower()
-    for figure in figures:
-        if figure.name.lower() in lowered and figure not in matched:
-            matched.append(figure)
-    return matched
+def _figures_by_name(figures: list[Figure]) -> dict[str, Figure]:
+    return {f.name.strip().casefold(): f for f in figures}

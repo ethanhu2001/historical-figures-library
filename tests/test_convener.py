@@ -38,23 +38,40 @@ def test_select_figures_tops_up_to_minimum_when_reply_is_short():
     assert selected[0].name == "Marcus Aurelius"
 
 
+def test_select_figures_does_not_substring_match_a_shorter_name():
+    council = make_figures("Lee", "Lee Kuan Yew", "Warren Buffett", "Ray Dalio")
+    convener = Convener(
+        llm=FakeLLM(["Lee Kuan Yew, Warren Buffett, Ray Dalio"]), council=council
+    )
+
+    selected = convener.select_figures("Should I take this job?")
+
+    assert [f.name for f in selected] == ["Lee Kuan Yew", "Warren Buffett", "Ray Dalio"]
+
+
 def test_choose_next_speaker_returns_none_on_end():
     council = make_figures("Marcus Aurelius", "Warren Buffett")
-    convener = Convener(llm=FakeLLM(["END\nDebate has run its course."]), council=council)
+    convener = Convener(llm=FakeLLM(["END"]), council=council)
 
     assert convener.choose_next_speaker(council, "transcript") is None
 
 
 def test_choose_next_speaker_matches_named_figure():
     council = make_figures("Marcus Aurelius", "Warren Buffett")
-    convener = Convener(
-        llm=FakeLLM(["Warren Buffett\nHe should respond to the point about risk."]),
-        council=council,
-    )
+    convener = Convener(llm=FakeLLM(["Warren Buffett"]), council=council)
 
     speaker = convener.choose_next_speaker(council, "transcript")
 
     assert speaker.name == "Warren Buffett"
+
+
+def test_choose_next_speaker_does_not_substring_match_a_shorter_name():
+    council = make_figures("Lee", "Lee Kuan Yew")
+    convener = Convener(llm=FakeLLM(["Lee Kuan Yew"]), council=council)
+
+    speaker = convener.choose_next_speaker(council, "transcript")
+
+    assert speaker.name == "Lee Kuan Yew"
 
 
 def test_prompt_figure_sends_figures_system_prompt_and_transcript():
