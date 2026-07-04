@@ -28,7 +28,7 @@ class Convener:
 
     def prompt_figure(self, figure: Figure, transcript: str) -> str:
         prompt = (
-            f"Transcript so far:\n{transcript}\n\n"
+            f"{_transcript_block(transcript)}"
             "Speak now. If you need information from the user to make your case, "
             "wrap your question in <clarifying_question></clarifying_question> "
             "tags instead of responding normally."
@@ -62,7 +62,7 @@ class Convener:
         roster_desc = ", ".join(f.name for f in seated)
         prompt = (
             f"Seated Council members: {roster_desc}\n\n"
-            f"Transcript so far:\n{transcript}\n\n"
+            f"{_transcript_block(transcript)}"
             "Who should speak next? If the debate has run its course, reply with "
             "exactly END instead of a name. Reply with ONLY the figure's exact "
             "name (or END), nothing else."
@@ -76,13 +76,17 @@ class Convener:
 
     def synthesize(self, transcript: str) -> str:
         prompt = (
-            f"Transcript:\n{transcript}\n\n"
+            f"{_transcript_block(transcript)}"
             "Write the closing Synthesis: state which factual or logical claims "
             "held up under challenge, and for any genuinely value-laden "
             "disagreement, present the strongest surviving version of each side "
             "rather than forcing a winner."
         )
         return self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=2000)
+
+
+def _transcript_block(transcript: str) -> str:
+    return f"Transcript so far:\n{transcript}\n\n"
 
 
 def _figures_by_name(figures: list[Figure]) -> dict[str, Figure]:

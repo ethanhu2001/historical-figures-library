@@ -5,9 +5,9 @@ Status: needs-triage
 ## Problem Statement
 
 Today a Figure answers purely from its system prompt (`figures/<slug>.md`)
-and the LLM's training knowledge (`Session._figure_speak` in
-`src/council/session.py` sends only the question and transcript-so-far —
-see `src/council/session.py:67-79`). For questions touching current events,
+and the LLM's training knowledge (`Convener.prompt_figure` in
+`src/council/convener.py` sends only the transcript-so-far —
+see `src/council/convener.py:29-36`). For questions touching current events,
 recent statistics, or any fact outside a Figure's authored `Known positions`,
 a Figure has no way to check itself — it either guesses, states something
 stale or wrong, or falls back to a Clarifying Question directed at the user,
