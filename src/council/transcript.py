@@ -4,9 +4,10 @@ import datetime
 import re
 from pathlib import Path
 
+from council.paths import REPO_ROOT
 from council.session import Session
 
-SESSIONS_DIR = Path(__file__).resolve().parent.parent.parent / "sessions"
+SESSIONS_DIR = REPO_ROOT / "sessions"
 
 
 def _slugify(text: str, max_words: int = 8) -> str:

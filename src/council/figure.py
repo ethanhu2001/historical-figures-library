@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-FIGURES_DIR = Path(__file__).resolve().parent.parent.parent / "figures"
+from council.paths import REPO_ROOT
+
+FIGURES_DIR = REPO_ROOT / "figures"
 
 _SECTION_RE = re.compile(r"^##\s+(.+)$")
 
