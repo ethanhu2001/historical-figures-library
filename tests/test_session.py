@@ -22,7 +22,7 @@ class FakeConvener:
     def __init__(self, seated, speaker_sequence, llm, synthesis="Synthesis text"):
         self.seated = seated
         self._speaker_sequence = iter(speaker_sequence)
-        self.llm = llm
+        self._llm = llm
         self._synthesis = synthesis
 
     def select_figures(self, question):
@@ -30,6 +30,12 @@ class FakeConvener:
 
     def choose_next_speaker(self, seated, transcript):
         return next(self._speaker_sequence)
+
+    def prompt_figure(self, figure, transcript):
+        return self._llm.complete(
+            system=figure.system_prompt,
+            messages=[{"role": "user", "content": transcript}],
+        )
 
     def synthesize(self, transcript):
         return self._synthesis

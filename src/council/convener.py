@@ -19,6 +19,22 @@ class Convener:
         self.llm = llm
         self.council = council
 
+    def _ask(self, system: str, prompt: str, max_tokens: int) -> str:
+        return self.llm.complete(
+            system=system,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+        )
+
+    def prompt_figure(self, figure: Figure, transcript: str) -> str:
+        prompt = (
+            f"Transcript so far:\n{transcript}\n\n"
+            "Speak now. If you need information from the user to make your case, "
+            "wrap your question in <clarifying_question></clarifying_question> "
+            "tags instead of responding normally."
+        )
+        return self._ask(system=figure.system_prompt, prompt=prompt, max_tokens=1200)
+
     def select_figures(self, question: str) -> list[Figure]:
         roster_desc = "\n".join(
             f"- {f.name}: {f.worldview.splitlines()[0]}" for f in self.council
@@ -30,11 +46,7 @@ class Convener:
             "genuinely relevant to this question. Reply with ONLY a comma-separated "
             "list of their exact names, nothing else."
         )
-        reply = self.llm.complete(
-            system=CONVENER_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-        )
+        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=200)
         selected = _match_names(reply, self.council)
         if len(selected) < MIN_FIGURES:
             remaining = [f for f in self.council if f not in selected]
@@ -51,11 +63,7 @@ class Convener:
             "exact name (or END) on the first line, then a one-sentence reason "
             "on the second line."
         )
-        reply = self.llm.complete(
-            system=CONVENER_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
-        )
+        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=100)
         stripped = reply.strip()
         first_line = stripped.splitlines()[0].strip() if stripped else ""
         if first_line.upper() == "END":
@@ -71,11 +79,7 @@ class Convener:
             "disagreement, present the strongest surviving version of each side "
             "rather than forcing a winner."
         )
-        return self.llm.complete(
-            system=CONVENER_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=2000,
-        )
+        return self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=2000)
 
 
 def _match_names(text: str, figures: list[Figure]) -> list[Figure]:

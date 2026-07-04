@@ -48,7 +48,7 @@ class Session:
             if speaker is None:
                 break
 
-            reply = self._figure_speak(speaker)
+            reply = self.convener.prompt_figure(speaker, self.transcript_text())
             clarifying = CLARIFYING_QUESTION_RE.search(reply)
 
             if clarifying:
@@ -63,20 +63,6 @@ class Session:
         synthesis = self.convener.synthesize(self.transcript_text())
         self._record("Convener (Synthesis)", synthesis, on_turn)
         return synthesis
-
-    def _figure_speak(self, figure: Figure) -> str:
-        prompt = (
-            f"The question under debate: {self.question}\n\n"
-            f"Transcript so far:\n{self.transcript_text()}\n\n"
-            "Speak now. If you need information from the user to make your case, "
-            "wrap your question in <clarifying_question></clarifying_question> "
-            "tags instead of responding normally."
-        )
-        return self.convener.llm.complete(
-            system=figure.system_prompt,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1200,
-        )
 
     def _record(self, speaker: str, text: str, on_turn: OnTurn | None) -> None:
         self.turns.append(Turn(speaker=speaker, text=text))

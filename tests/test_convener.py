@@ -55,3 +55,25 @@ def test_choose_next_speaker_matches_named_figure():
     speaker = convener.choose_next_speaker(council, "transcript")
 
     assert speaker.name == "Warren Buffett"
+
+
+def test_prompt_figure_sends_figures_system_prompt_and_transcript():
+    figure = make_figures("Marcus Aurelius")[0]
+    figure = Figure(
+        slug=figure.slug, name=figure.name, worldview="w", system_prompt="Marcus's system prompt"
+    )
+    seen = {}
+
+    class RecordingLLM:
+        def complete(self, system, messages, max_tokens=1024):
+            seen["system"] = system
+            seen["prompt"] = messages[0]["content"]
+            return "reply from Marcus"
+
+    convener = Convener(llm=RecordingLLM(), council=[figure])
+
+    reply = convener.prompt_figure(figure, "User: Should I take this job?")
+
+    assert reply == "reply from Marcus"
+    assert seen["system"] == "Marcus's system prompt"
+    assert "User: Should I take this job?" in seen["prompt"]
