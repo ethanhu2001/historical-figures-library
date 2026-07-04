@@ -1,4 +1,4 @@
-Status: needs-triage
+Status: ready-for-agent
 
 # Figure web search: internet-grounded factual claims
 
@@ -37,13 +37,13 @@ blocking on the user.
 
 ## Implementation Decisions
 
-Open — flagged for a design pass before this is `ready-for-agent`:
+Locked in via grilling session on 2026-07-03 (see ADR-0003):
 
-- **Mechanism**: Anthropic's API offers a server-side web search tool that can be passed via the `tools` argument to `messages.create`. `LLMClient.complete()` (`src/council/llm.py:21-28`) currently sends no `tools` and only concatenates `text` content blocks from the response — supporting search means handling tool-use blocks and (if using a client-side search tool instead) a tool-result round-trip, which is a real change to this method's contract, not an additive flag.
-- **Who gets search**: Figures only, the Convener only, or both. Unrestricted per-Figure search on every turn is in tension with the existing turn budget (`ROUNDS_PER_FIGURE` in `src/council/session.py`) and with keeping Figures' distinctive Worldview-driven voice primary — needs an explicit decision, not a default-on assumption.
-- **Budget/limits**: needs a per-Session and/or per-turn search cap, similar in spirit to the existing turn budget, to bound cost and latency.
-- **Transcript representation**: does a search's result get folded silently into a Figure's answer text, or does `Turn` (`src/council/session.py`) gain a distinct representation for "searched and found X" so it's visible/citable in `transcript.py` output?
-- **Relationship to Clarifying Questions**: `figures/TEMPLATE.md`'s "Debate behavior" section currently only tells a Figure to ask the *user* when it lacks information. That section (and the `CLARIFYING_QUESTION_RE` mechanism in `session.py`) may need to be extended or disambiguated once "look it up myself" becomes a second option.
+- **Mechanism**: Anthropic's native server-side web search tool, passed via the `tools` argument to `messages.create` — not a client-managed tool-loop against a third-party search vendor. Claude decides when to search and the API executes it server-side, returning results as content blocks in the same response; no second round-trip, no new vendor/API key. This keeps `LLMClient` a thin, single-provider wrapper, consistent with ADR-0001's single-model stance.
+- **Who gets search**: Figures only, via `Convener.prompt_figure` (`src/council/convener.py`). `select_figures`, `choose_next_speaker`, and `synthesize` do not request the tool — they're orchestration and summarization of claims Figures already made, not places a new factual claim should originate.
+- **Budget/limits**: enforced via the web search tool's own `max_uses` parameter, scoped to the single `messages.create` call `prompt_figure` makes per Figure turn. A new constant (e.g. `MAX_SEARCHES_PER_TURN`), analogous to `ROUNDS_PER_FIGURE` (`src/council/session.py`), sets this — no new Session-level search-tracking state required.
+- **Transcript representation**: `LLMClient.complete()`'s return type changes from a bare `str` to a small result carrying `text` plus any `citations` the response's content blocks carried. Block-handling complexity (text vs. server-side search-result blocks vs. cited-text blocks) lives once inside `complete()`. The three orchestration call sites never request the tool, so their `citations` is always empty and they read `.text` same as today; only `prompt_figure` reads both. `Turn` (`src/council/session.py`) gains an optional `citations` field so `transcript.py` can render sources under a turn when present — satisfying "visible in the transcript" without new infrastructure.
+- **Relationship to Clarifying Questions**: `figures/TEMPLATE.md`'s "Debate behavior" section currently says only "ask the user a direct clarifying question" when information is lacking. That sentence is updated to distinguish the two: ask the *user* for things only they would know (their situation, preferences, values); rely on search — automatic, no tag needed — for facts the world knows. This is part of this PRD's implementation, not a follow-on.
 
 ## Testing Decisions
 

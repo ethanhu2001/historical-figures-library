@@ -4,6 +4,7 @@ import pytest
 
 from council.convener import MIN_FIGURES, Convener
 from council.figure import Figure
+from council.llm import Completion
 from fakes import FakeLLM
 
 
@@ -85,15 +86,17 @@ def test_prompt_figure_sends_figures_system_prompt_and_transcript():
     seen = {}
 
     class RecordingLLM:
-        def complete(self, system, messages, max_tokens=1024):
+        def complete(self, system, messages, max_tokens=1024, tools=None):
             seen["system"] = system
             seen["prompt"] = messages[0]["content"]
-            return "reply from Marcus"
+            seen["tools"] = tools
+            return Completion(text="reply from Marcus")
 
     convener = Convener(llm=RecordingLLM(), council=[figure])
 
     reply = convener.prompt_figure(figure, "User: Should I take this job?")
 
-    assert reply == "reply from Marcus"
+    assert reply.text == "reply from Marcus"
     assert seen["system"] == "Marcus's system prompt"
     assert "User: Should I take this job?" in seen["prompt"]
+    assert seen["tools"] is not None

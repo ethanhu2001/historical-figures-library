@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 
 from council.figure import Figure
+from council.llm import Citation, Completion
 from council.session import ROUNDS_PER_FIGURE, Session
 from fakes import FakeLLM
 
@@ -81,6 +82,35 @@ def test_clarifying_question_pauses_and_does_not_count_against_turn_budget():
     assert asked == ["(A) What's your risk tolerance?"]
     speakers = [t.speaker for t in session.turns]
     assert speakers == ["User", "A", "User", "A", "Convener (Synthesis)"]
+
+
+def test_run_records_citations_from_a_figures_turn():
+    a = figure("A")
+    citation = Citation(url="https://example.com", title="Example")
+
+    class ConvenerWithCitations:
+        def __init__(self, speaker_sequence):
+            self._speaker_sequence = iter(speaker_sequence)
+
+        def select_figures(self, question):
+            return [a]
+
+        def choose_next_speaker(self, seated, transcript):
+            return next(self._speaker_sequence)
+
+        def prompt_figure(self, figure, transcript):
+            return Completion(text="grounded reply", citations=[citation])
+
+        def synthesize(self, transcript):
+            return "Synthesis text"
+
+    convener = ConvenerWithCitations(speaker_sequence=[a, None])
+    session = Session(question="Q?", convener=convener)
+
+    session.run(ask_user=lambda p: "unused")
+
+    figure_turn = next(t for t in session.turns if t.speaker == "A")
+    assert figure_turn.citations == [citation]
 
 
 def test_run_falls_back_to_first_seated_figure_when_convener_reply_does_not_decode():

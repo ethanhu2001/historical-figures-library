@@ -6,6 +6,7 @@ from typing import Callable
 
 from council.convener import Convener
 from council.figure import Figure
+from council.llm import Citation
 
 ROUNDS_PER_FIGURE = 5
 
@@ -24,6 +25,7 @@ OnTurn = Callable[[str, str], None]
 class Turn:
     speaker: str
     text: str
+    citations: list[Citation] = field(default_factory=list)
 
 
 @dataclass
@@ -51,23 +53,29 @@ class Session:
             if speaker is None:
                 break
 
-            reply = self.convener.prompt_figure(speaker, self.transcript_text())
-            clarifying = CLARIFYING_QUESTION_RE.search(reply)
+            completion = self.convener.prompt_figure(speaker, self.transcript_text())
+            clarifying = CLARIFYING_QUESTION_RE.search(completion.text)
 
             if clarifying:
-                self._record(speaker.name, reply, on_turn)
+                self._record(speaker.name, completion.text, on_turn, completion.citations)
                 answer = ask_user(f"({speaker.name}) {clarifying.group(1).strip()}")
                 self._record("User", answer, on_turn)
                 continue  # Clarifying pauses don't count against the turn budget
 
-            self._record(speaker.name, reply, on_turn)
+            self._record(speaker.name, completion.text, on_turn, completion.citations)
             debate_turns += 1
 
         synthesis = self.convener.synthesize(self.transcript_text())
         self._record("Convener (Synthesis)", synthesis, on_turn)
         return synthesis
 
-    def _record(self, speaker: str, text: str, on_turn: OnTurn | None) -> None:
-        self.turns.append(Turn(speaker=speaker, text=text))
+    def _record(
+        self,
+        speaker: str,
+        text: str,
+        on_turn: OnTurn | None,
+        citations: list[Citation] | None = None,
+    ) -> None:
+        self.turns.append(Turn(speaker=speaker, text=text, citations=citations or []))
         if on_turn:
             on_turn(speaker, text)

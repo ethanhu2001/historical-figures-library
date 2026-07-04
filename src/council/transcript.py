@@ -24,6 +24,9 @@ def save_transcript(session: Session, sessions_dir: Path = SESSIONS_DIR) -> Path
     lines = [f"# {session.question}", "", f"Seated: {', '.join(f.name for f in session.seated)}", ""]
     for turn in session.turns:
         lines += [f"## {turn.speaker}", "", turn.text, ""]
+        if turn.citations:
+            sources = ", ".join(f"[{c.title}]({c.url})" for c in turn.citations)
+            lines += [f"Sources: {sources}", ""]
 
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
