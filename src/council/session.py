@@ -44,7 +44,10 @@ class Session:
         debate_turns = 0
 
         while debate_turns < max_turns:
-            speaker = self.convener.choose_next_speaker(self.seated, self.transcript_text())
+            try:
+                speaker = self.convener.choose_next_speaker(self.seated, self.transcript_text())
+            except ValueError:
+                speaker = self.seated[0]
             if speaker is None:
                 break
 

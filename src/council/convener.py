@@ -72,7 +72,10 @@ class Convener:
         if decoded == "end":
             return None
         by_name = _figures_by_name(seated)
-        return by_name.get(decoded, seated[0])
+        speaker = by_name.get(decoded)
+        if speaker is None:
+            raise ValueError(f"Convener reply {reply!r} did not match any seated figure or END")
+        return speaker
 
     def synthesize(self, transcript: str) -> str:
         prompt = (

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from council.convener import MIN_FIGURES, Convener
 from council.figure import Figure
 from fakes import FakeLLM
@@ -65,6 +67,14 @@ def test_choose_next_speaker_does_not_substring_match_a_shorter_name():
     speaker = convener.choose_next_speaker(council, "transcript")
 
     assert speaker.name == "Lee Kuan Yew"
+
+
+def test_choose_next_speaker_raises_when_reply_does_not_match_a_seated_figure():
+    council = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(llm=FakeLLM(["Someone Not On The Council"]), council=council)
+
+    with pytest.raises(ValueError):
+        convener.choose_next_speaker(council, "transcript")
 
 
 def test_prompt_figure_sends_figures_system_prompt_and_transcript():

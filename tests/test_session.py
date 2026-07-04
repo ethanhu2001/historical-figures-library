@@ -22,7 +22,10 @@ class FakeConvener:
         return self.seated
 
     def choose_next_speaker(self, seated, transcript):
-        return next(self._speaker_sequence)
+        result = next(self._speaker_sequence)
+        if isinstance(result, Exception):
+            raise result
+        return result
 
     def prompt_figure(self, figure, transcript):
         return self._llm.complete(
@@ -78,6 +81,21 @@ def test_clarifying_question_pauses_and_does_not_count_against_turn_budget():
     assert asked == ["(A) What's your risk tolerance?"]
     speakers = [t.speaker for t in session.turns]
     assert speakers == ["User", "A", "User", "A", "Convener (Synthesis)"]
+
+
+def test_run_falls_back_to_first_seated_figure_when_convener_reply_does_not_decode():
+    a, b = figure("A"), figure("B")
+    convener = FakeConvener(
+        seated=[a, b],
+        speaker_sequence=[ValueError("bad reply"), None],
+        llm=FakeLLM(["reply from A"]),
+    )
+    session = Session(question="Q?", convener=convener)
+
+    session.run(ask_user=lambda p: "unused")
+
+    speakers = [t.speaker for t in session.turns]
+    assert speakers == ["User", "A", "Convener (Synthesis)"]
 
 
 def test_debate_stops_at_turn_budget_even_if_convener_never_ends():
