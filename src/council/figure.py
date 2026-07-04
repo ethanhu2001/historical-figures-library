@@ -17,37 +17,39 @@ class Figure:
     system_prompt: str
 
 
-def _parse_figure_file(path: Path) -> Figure:
-    text = path.read_text(encoding="utf-8").strip()
+def parse_figure(text: str, slug: str) -> Figure:
+    text = text.strip()
     lines = text.splitlines()
     if not lines or not lines[0].startswith("# "):
-        raise ValueError(f"{path}: expected a top-level '# Name' heading")
+        raise ValueError(f"{slug}: expected a top-level '# Name' heading")
     name = lines[0][2:].strip()
 
-    sections: dict[str, str] = {}
-    heading: str | None = None
+    worldview = _section(lines[1:], "worldview")
+    if worldview is None:
+        raise ValueError(f"{slug}: missing required '## Worldview' section")
+
+    return Figure(slug=slug, name=name, worldview=worldview, system_prompt=text)
+
+
+def _section(lines: list[str], heading_name: str) -> str | None:
     body: list[str] = []
-    for line in lines[1:]:
+    found = False
+    in_section = False
+    for line in lines:
         match = _SECTION_RE.match(line)
         if match:
-            if heading is not None:
-                sections[heading] = "\n".join(body).strip()
-            heading = match.group(1).strip().lower()
-            body = []
-        else:
+            if in_section:
+                break
+            in_section = match.group(1).strip().lower() == heading_name
+            found = found or in_section
+            continue
+        if in_section:
             body.append(line)
-    if heading is not None:
-        sections[heading] = "\n".join(body).strip()
+    return "\n".join(body).strip() if found else None
 
-    if "worldview" not in sections:
-        raise ValueError(f"{path}: missing required '## Worldview' section")
 
-    return Figure(
-        slug=path.stem,
-        name=name,
-        worldview=sections["worldview"],
-        system_prompt=text,
-    )
+def _parse_figure_file(path: Path) -> Figure:
+    return parse_figure(path.read_text(encoding="utf-8"), slug=path.stem)
 
 
 def load_figures(figures_dir: Path = FIGURES_DIR) -> list[Figure]:
