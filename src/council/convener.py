@@ -53,6 +53,28 @@ class Convener:
             tools=[WEB_SEARCH_TOOL],
         )
 
+    def needs_council(self, question: str) -> bool:
+        prompt = (
+            f"Question: {question}\n\n"
+            "Does this genuinely call for a debate among historical figures with "
+            "different worldviews (a decision, a value-laden tradeoff, a matter of "
+            "opinion or strategy)? Reply NO instead if it's a simple factual or "
+            "trivial question with one straightforward answer (e.g. the weather, "
+            "a definition, basic arithmetic) that would not benefit from debate.\n\n"
+            "Reply with ONLY YES or NO, nothing else."
+        )
+        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=10).text
+        return reply.strip().casefold().startswith("y")
+
+    def answer_directly(self, question: str) -> str:
+        prompt = f"Question: {question}\n\nAnswer directly and concisely."
+        return self._ask(
+            system="You are a helpful, direct assistant. Answer plainly, without "
+            "adopting any persona.",
+            prompt=prompt,
+            max_tokens=500,
+        ).text
+
     def select_figures(self, question: str) -> list[Figure]:
         roster_desc = "\n".join(
             f"- {f.name}: {f.worldview.splitlines()[0]}" for f in self.council

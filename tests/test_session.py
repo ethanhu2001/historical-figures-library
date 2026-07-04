@@ -19,6 +19,9 @@ class FakeConvener:
         self._llm = llm
         self._synthesis = synthesis
 
+    def needs_council(self, question):
+        return True
+
     def select_figures(self, question):
         return self.seated
 
@@ -92,6 +95,9 @@ def test_run_records_citations_from_a_figures_turn():
         def __init__(self, speaker_sequence):
             self._speaker_sequence = iter(speaker_sequence)
 
+        def needs_council(self, question):
+            return True
+
         def select_figures(self, question):
             return [a]
 
@@ -126,6 +132,33 @@ def test_run_falls_back_to_first_seated_figure_when_convener_reply_does_not_deco
 
     speakers = [t.speaker for t in session.turns]
     assert speakers == ["User", "A", "Convener (Synthesis)"]
+
+
+def test_trivial_question_skips_council_and_returns_direct_answer():
+    class DirectAnswerConvener:
+        def needs_council(self, question):
+            return False
+
+        def answer_directly(self, question):
+            return "It's sunny."
+
+        def select_figures(self, question):
+            raise AssertionError("should not seat figures for a trivial question")
+
+        def choose_next_speaker(self, seated, transcript):
+            raise AssertionError("should not run a debate for a trivial question")
+
+        def synthesize(self, transcript):
+            raise AssertionError("should not synthesize a debate that never ran")
+
+    session = Session(question="What's the weather like?", convener=DirectAnswerConvener())
+
+    answer = session.run(ask_user=lambda p: "unused")
+
+    assert answer == "It's sunny."
+    assert session.seated == []
+    speakers = [t.speaker for t in session.turns]
+    assert speakers == ["User", "Convener (Direct Answer)"]
 
 
 def test_debate_stops_at_turn_budget_even_if_convener_never_ends():

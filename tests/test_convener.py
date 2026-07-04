@@ -15,6 +15,24 @@ def make_figures(*names):
     ]
 
 
+def test_needs_council_is_true_on_yes_reply():
+    convener = Convener(llm=FakeLLM(["YES"]), council=[])
+
+    assert convener.needs_council("Should I take this job?") is True
+
+
+def test_needs_council_is_false_on_no_reply():
+    convener = Convener(llm=FakeLLM(["NO"]), council=[])
+
+    assert convener.needs_council("What is the weather like?") is False
+
+
+def test_answer_directly_returns_llm_text():
+    convener = Convener(llm=FakeLLM(["It's sunny."]), council=[])
+
+    assert convener.answer_directly("What is the weather like?") == "It's sunny."
+
+
 def test_select_figures_parses_comma_separated_names():
     council = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
     convener = Convener(llm=FakeLLM(["Marcus Aurelius, Warren Buffett, Ray Dalio"]), council=council)

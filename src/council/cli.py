@@ -31,11 +31,12 @@ def ask(question: str) -> None:
         typer.echo(typer.style(f"{speaker}:", bold=True))
         typer.echo(text)
 
-    synthesis = session.run(ask_user=ask_user, on_turn=on_turn)
+    result = session.run(ask_user=ask_user, on_turn=on_turn)
 
+    label = "Synthesis:" if session.seated else "Answer:"
     typer.echo()
-    typer.echo(typer.style("Synthesis:", bold=True, fg=typer.colors.CYAN))
-    typer.echo(synthesis)
+    typer.echo(typer.style(label, bold=True, fg=typer.colors.CYAN))
+    typer.echo(result)
 
     path = save_transcript(session)
     typer.echo()

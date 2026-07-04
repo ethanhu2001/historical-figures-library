@@ -39,8 +39,14 @@ class Session:
         return "\n\n".join(f"{t.speaker}: {t.text}" for t in self.turns)
 
     def run(self, ask_user: AskUser, on_turn: OnTurn | None = None) -> str:
-        self.seated = self.convener.select_figures(self.question)
         self._record("User", self.question, on_turn)
+
+        if not self.convener.needs_council(self.question):
+            answer = self.convener.answer_directly(self.question)
+            self._record("Convener (Direct Answer)", answer, on_turn=None)
+            return answer
+
+        self.seated = self.convener.select_figures(self.question)
 
         max_turns = ROUNDS_PER_FIGURE * len(self.seated)
         debate_turns = 0

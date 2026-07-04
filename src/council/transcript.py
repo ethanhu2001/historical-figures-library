@@ -21,7 +21,9 @@ def save_transcript(session: Session, sessions_dir: Path = SESSIONS_DIR) -> Path
     slug = _slugify(session.question)
     path = sessions_dir / f"{date}-{slug}.md"
 
-    lines = [f"# {session.question}", "", f"Seated: {', '.join(f.name for f in session.seated)}", ""]
+    lines = [f"# {session.question}", ""]
+    if session.seated:
+        lines += [f"Seated: {', '.join(f.name for f in session.seated)}", ""]
     for turn in session.turns:
         lines += [f"## {turn.speaker}", "", turn.text, ""]
         if turn.citations:
