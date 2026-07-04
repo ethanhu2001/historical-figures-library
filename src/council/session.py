@@ -66,7 +66,7 @@ class Session:
             debate_turns += 1
 
         synthesis = self.convener.synthesize(self.transcript_text())
-        self._record("Convener (Synthesis)", synthesis, on_turn)
+        self._record("Convener (Synthesis)", synthesis, on_turn=None)
         return synthesis
 
     def _record(
