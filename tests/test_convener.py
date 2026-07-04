@@ -2,14 +2,7 @@ from __future__ import annotations
 
 from council.convener import MIN_FIGURES, Convener
 from council.figure import Figure
-
-
-class FakeLLM:
-    def __init__(self, replies):
-        self._replies = iter(replies)
-
-    def complete(self, system, messages, max_tokens=1024):
-        return next(self._replies)
+from fakes import FakeLLM
 
 
 def make_figures(*names):

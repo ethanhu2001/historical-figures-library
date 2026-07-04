@@ -4,14 +4,7 @@ import itertools
 
 from council.figure import Figure
 from council.session import ROUNDS_PER_FIGURE, Session
-
-
-class FakeLLM:
-    def __init__(self, replies):
-        self._replies = iter(replies)
-
-    def complete(self, system, messages, max_tokens=1024):
-        return next(self._replies)
+from fakes import FakeLLM
 
 
 class FakeConvener:
