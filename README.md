@@ -1,5 +1,7 @@
 # Historical Figures Library
 
+[![GitHub](https://img.shields.io/badge/GitHub-ethanhu2001%2Fhistorical--figures--library-181717?logo=github)](https://github.com/ethanhu2001/historical-figures-library)
+
 A Council of historical figures, each an AI agent with its own `.md` system
 prompt and a distinct Worldview, who debate the questions you bring them —
 they don't just answer, they argue with each other. See `CONTEXT.md` for
