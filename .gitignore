@@ -10,3 +10,4 @@ build/
 sessions/*.md
 !sessions/.gitkeep
 .claude/
+.DS_Store
