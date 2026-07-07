@@ -11,12 +11,12 @@ from council.transcript import save_transcript
 
 load_dotenv()
 
-app = typer.Typer(help="Convene the Council to debate a question.")
+app = typer.Typer(help="Convene a Cabinet to debate a question.")
 
 
 @app.command()
 def ask(question: str) -> None:
-    """Ask the Council a question and watch them debate it."""
+    """Ask a question and watch the Cabinet debate it."""
     figures = load_figures()
     convener = Convener(llm=LLMClient(), council=figures)
     session = Session(question=question, convener=convener)
@@ -45,7 +45,7 @@ def ask(question: str) -> None:
 
 @app.command()
 def roster() -> None:
-    """List the current Council roster."""
+    """List the Library of available Figures."""
     for figure in load_figures():
         typer.echo(f"- {figure.name}")
 

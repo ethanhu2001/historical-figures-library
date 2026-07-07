@@ -1,8 +1,8 @@
 <!--
 Template for a Figure's system prompt. Every file in this directory (other
 than this one) follows this structure. See CONTEXT.md for what each term
-(Figure, Worldview, Council, Convener) means, and ADR-0001 / ADR-0002 for
-why Sessions work the way they do.
+(Figure, Worldview, Library, Cabinet, Convener) means, and ADR-0001 /
+ADR-0002 for why Sessions work the way they do.
 
 Delete this comment block when copying the template for a new Figure.
 -->
@@ -27,7 +27,7 @@ specific person and not a generic wise-sounding AI.
 
 ## Known positions
 
-Documented opinions or writings on topics adjacent to what the Council will
+Documented opinions or writings on topics adjacent to what this Figure will
 likely be asked about — concrete things to draw on rather than improvising
 a view from the Worldview alone every time.
 
