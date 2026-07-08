@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from council.convener import MIN_FIGURES, Convener
+from council.convener import MIN_FIGURES, Convener, TooFewFigures, UnknownFigure, resolve_picks
 from council.figure import Figure
 from council.llm import Completion
 from fakes import FakeLLM
@@ -82,6 +82,53 @@ def test_select_figures_tops_up_from_candidates_not_full_library():
 
     assert len(selected) == MIN_FIGURES
     assert "Charlie Munger" not in [f.name for f in selected]
+
+
+def test_resolve_picks_maps_names_to_figures():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+
+    resolved = resolve_picks(["Marcus Aurelius", "Ray Dalio", "Warren Buffett"], library)
+
+    assert [f.name for f in resolved] == ["Marcus Aurelius", "Ray Dalio", "Warren Buffett"]
+
+
+def test_resolve_picks_does_not_substring_match_a_shorter_name():
+    library = make_figures("Lee", "Lee Kuan Yew", "Warren Buffett")
+
+    resolved = resolve_picks(["Lee Kuan Yew", "Warren Buffett", "Lee"], library)
+
+    assert [f.name for f in resolved] == ["Lee Kuan Yew", "Warren Buffett", "Lee"]
+
+
+def test_resolve_picks_raises_unknown_figure_for_an_unmatched_identifier():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+
+    with pytest.raises(UnknownFigure):
+        resolve_picks(["Marcus Aurelius", "Someone Not In The Library", "Ray Dalio"], library)
+
+
+def test_resolve_picks_raises_too_few_figures_below_the_minimum():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+
+    with pytest.raises(TooFewFigures):
+        resolve_picks(["Marcus Aurelius", "Warren Buffett"], library)
+
+
+def test_resolve_picks_deduplicates_before_checking_the_minimum():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+
+    with pytest.raises(TooFewFigures):
+        resolve_picks(["Marcus Aurelius", "Marcus Aurelius", "Marcus Aurelius"], library)
+
+
+def test_resolve_picks_deduplicates_repeated_identifiers():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+
+    resolved = resolve_picks(
+        ["Marcus Aurelius", "Warren Buffett", "Marcus Aurelius", "Ray Dalio"], library
+    )
+
+    assert [f.name for f in resolved] == ["Marcus Aurelius", "Warren Buffett", "Ray Dalio"]
 
 
 def test_choose_next_speaker_returns_none_on_end():

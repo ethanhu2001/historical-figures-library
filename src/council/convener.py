@@ -135,3 +135,33 @@ def _transcript_block(transcript: str) -> str:
 
 def _figures_by_name(figures: list[Figure]) -> dict[str, Figure]:
     return {f.name.strip().casefold(): f for f in figures}
+
+
+class UnknownFigure(Exception):
+    def __init__(self, identifier: str) -> None:
+        super().__init__(f"{identifier!r} does not match any Figure in the Library")
+        self.identifier = identifier
+
+
+class TooFewFigures(Exception):
+    def __init__(self, given: int, required: int = MIN_FIGURES) -> None:
+        super().__init__(f"Cabinet needs at least {required} distinct Figures, got {given}")
+        self.given = given
+        self.required = required
+
+
+def resolve_picks(identifiers: list[str], library: list[Figure]) -> list[Figure]:
+    """Resolve user-picked Figure names/slugs into a validated Cabinet candidate
+    pool. Raises UnknownFigure the moment an identifier doesn't match the
+    Library, and TooFewFigures if fewer than MIN_FIGURES distinct Figures
+    remain after de-duplication."""
+    by_name = _figures_by_name(library)
+    resolved: dict[str, Figure] = {}
+    for identifier in identifiers:
+        figure = by_name.get(identifier.strip().casefold())
+        if figure is None:
+            raise UnknownFigure(identifier)
+        resolved[figure.slug] = figure
+    if len(resolved) < MIN_FIGURES:
+        raise TooFewFigures(given=len(resolved))
+    return list(resolved.values())

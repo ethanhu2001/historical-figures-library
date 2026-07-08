@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer
 from dotenv import load_dotenv
 
-from council.convener import MIN_FIGURES, Convener
+from council.convener import MIN_FIGURES, Convener, TooFewFigures, UnknownFigure, resolve_picks
 from council.figure import Figure, load_figures
 from council.llm import LLMClient
 from council.session import Session
@@ -33,13 +33,18 @@ def _pick_candidates(figures: list[Figure]) -> list[Figure] | None:
             return None
 
         try:
-            picks = [figures[int(token.strip()) - 1] for token in raw.split(",")]
+            identifiers = [figures[int(token.strip()) - 1].name for token in raw.split(",")]
         except (ValueError, IndexError):
             typer.echo("Could not parse that — enter comma-separated numbers from the list above.")
             continue
 
-        if len(picks) < MIN_FIGURES:
-            typer.echo(f"Pick at least {MIN_FIGURES} Figures, or press Enter to skip.")
+        try:
+            picks = resolve_picks(identifiers, figures)
+        except TooFewFigures:
+            typer.echo(f"Pick at least {MIN_FIGURES} distinct Figures, or press Enter to skip.")
+            continue
+        except UnknownFigure:
+            typer.echo("Could not parse that — enter comma-separated numbers from the list above.")
             continue
 
         typer.echo(f"Cabinet narrowed to your picks: {', '.join(f.name for f in picks)}")
