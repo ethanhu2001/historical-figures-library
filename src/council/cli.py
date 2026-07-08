@@ -91,5 +91,22 @@ def library() -> None:
         typer.echo(f"- {figure.name}")
 
 
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
+    """Run the web frontend (build it first: cd frontend && npm install && npm run build)."""
+    from council.web import FRONTEND_DIST
+
+    if not FRONTEND_DIST.exists():
+        typer.echo(
+            "Frontend build not found. Run `cd frontend && npm install && npm run build` first.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    import uvicorn
+
+    uvicorn.run("council.web:app", host=host, port=port)
+
+
 if __name__ == "__main__":
     app()
