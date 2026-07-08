@@ -79,9 +79,8 @@ export default function App() {
     setErrorMessage(null);
     setPhase("waiting");
     try {
-      const socket = connect(handleMessage);
-      socketRef.current = socket;
       await askQuestion(question);
+      socketRef.current = connect(handleMessage);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
       setPhase("error");
