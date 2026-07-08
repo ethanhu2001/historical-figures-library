@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from council.convener import MIN_FIGURES, Convener, TooFewFigures, UnknownFigure, resolve_picks
+from council.convener import (
+    MIN_FIGURES,
+    Convener,
+    TooFewFigures,
+    UnknownFigure,
+    UnrecognizedReply,
+    resolve_picks,
+)
 from council.figure import Figure
 from council.llm import Completion
 from fakes import FakeLLM
@@ -25,6 +32,18 @@ def test_needs_debate_is_false_on_no_reply():
     convener = Convener(llm=FakeLLM(["NO"]), library=[])
 
     assert convener.needs_debate("What is the weather like?") is False
+
+
+def test_needs_debate_defaults_to_false_on_an_unrecognized_reply():
+    convener = Convener(llm=FakeLLM(["maybe?"]), library=[])
+
+    assert convener.needs_debate("Should I take this job?") is False
+
+
+def test_needs_debate_requires_an_exact_match_not_a_prefix():
+    convener = Convener(llm=FakeLLM(["Yes, definitely worth debating"]), library=[])
+
+    assert convener.needs_debate("Should I take this job?") is False
 
 
 def test_answer_directly_returns_llm_text():
@@ -156,11 +175,11 @@ def test_choose_next_speaker_does_not_substring_match_a_shorter_name():
     assert speaker.name == "Lee Kuan Yew"
 
 
-def test_choose_next_speaker_raises_when_reply_does_not_match_a_seated_figure():
+def test_choose_next_speaker_raises_unrecognized_reply_when_no_seated_figure_matches():
     library = make_figures("Marcus Aurelius", "Warren Buffett")
     convener = Convener(llm=FakeLLM(["Someone Not On The Council"]), library=library)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(UnrecognizedReply):
         convener.choose_next_speaker(library, "transcript")
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import itertools
 
+from council.convener import UnrecognizedReply
 from council.figure import Figure
 from council.llm import Citation, Completion
 from council.session import ROUNDS_PER_FIGURE, Session
@@ -125,7 +126,7 @@ def test_run_falls_back_to_first_seated_figure_when_convener_reply_does_not_deco
     a, b = figure("A"), figure("B")
     convener = FakeConvener(
         seated=[a, b],
-        speaker_sequence=[ValueError("bad reply"), None],
+        speaker_sequence=[UnrecognizedReply("bad reply", valid_keys=["a", "b", "end"]), None],
         llm=FakeLLM(["reply from A"]),
     )
     session = Session(question="Q?", convener=convener)

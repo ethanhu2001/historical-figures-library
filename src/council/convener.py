@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 from council.figure import Figure
 from council.llm import Completion, LLMClient
+
+T = TypeVar("T")
+_MISSING = object()
 
 MIN_FIGURES = 3
 MAX_SEARCHES_PER_TURN = 3
@@ -39,6 +44,16 @@ class Convener:
             tools=tools,
         )
 
+    def _ask_choice(self, prompt: str, valid: dict[str, T], max_tokens: int) -> T:
+        """Ask for a reply drawn from a small closed vocabulary (e.g. yes/no, or
+        a seated Figure's name/END) and resolve it to the matching value.
+        Raises UnrecognizedReply if the normalized reply matches no key."""
+        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=max_tokens).text
+        value = valid.get(reply.strip().casefold(), _MISSING)
+        if value is _MISSING:
+            raise UnrecognizedReply(reply, valid_keys=list(valid))
+        return value
+
     def prompt_figure(self, figure: Figure, transcript: str) -> Completion:
         prompt = (
             f"{_transcript_block(transcript)}"
@@ -63,8 +78,10 @@ class Convener:
             "a definition, basic arithmetic) that would not benefit from debate.\n\n"
             "Reply with ONLY YES or NO, nothing else."
         )
-        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=10).text
-        return reply.strip().casefold().startswith("y")
+        try:
+            return self._ask_choice(prompt, valid={"yes": True, "no": False}, max_tokens=10)
+        except UnrecognizedReply:
+            return False
 
     def answer_directly(self, question: str) -> str:
         prompt = f"Question: {question}\n\nAnswer directly and concisely."
@@ -108,15 +125,8 @@ class Convener:
             "exactly END instead of a name. Reply with ONLY the figure's exact "
             "name (or END), nothing else."
         )
-        reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=100).text
-        decoded = reply.strip().casefold()
-        if decoded == "end":
-            return None
-        by_name = _figures_by_name(seated)
-        speaker = by_name.get(decoded)
-        if speaker is None:
-            raise ValueError(f"Convener reply {reply!r} did not match any seated figure or END")
-        return speaker
+        valid: dict[str, Figure | None] = {**_figures_by_name(seated), "end": None}
+        return self._ask_choice(prompt, valid=valid, max_tokens=100)
 
     def synthesize(self, transcript: str) -> str:
         prompt = (
@@ -135,6 +145,13 @@ def _transcript_block(transcript: str) -> str:
 
 def _figures_by_name(figures: list[Figure]) -> dict[str, Figure]:
     return {f.name.strip().casefold(): f for f in figures}
+
+
+class UnrecognizedReply(Exception):
+    def __init__(self, reply: str, valid_keys: list[str]) -> None:
+        super().__init__(f"Convener reply {reply!r} matched none of {valid_keys}")
+        self.reply = reply
+        self.valid_keys = valid_keys
 
 
 class UnknownFigure(Exception):

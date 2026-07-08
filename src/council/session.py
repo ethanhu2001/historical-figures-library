@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from council.convener import Convener
+from council.convener import Convener, UnrecognizedReply
 from council.figure import Figure
 from council.llm import Citation
 
@@ -61,7 +61,7 @@ class Session:
         while debate_turns < max_turns:
             try:
                 speaker = self.convener.choose_next_speaker(self.seated, self.transcript_text())
-            except ValueError:
+            except UnrecognizedReply:
                 speaker = self.seated[0]
             if speaker is None:
                 break
