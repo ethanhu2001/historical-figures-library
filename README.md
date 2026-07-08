@@ -22,13 +22,14 @@ cp .env.example .env  # then fill in ANTHROPIC_API_KEY
 
 ```bash
 council ask "Should I take a lower-paying job with more autonomy?"
-council roster
+council library
 ```
 
 Each Session:
 
-1. The Convener reads your question and seats at least 3 relevant Figures
-   from the Library (`ROSTER.md`) to form a Cabinet.
+1. `council ask` shows you the full Library and lets you pick at least 3
+   Figures for the Cabinet yourself — or press Enter to let the Convener
+   auto-select relevant Figures from the Library instead.
 2. Figures debate — the Convener names who speaks next and why, each turn.
    Any Figure can pause the Session with a clarifying question for you.
 3. Debate ends when the Convener judges it's run its course, or after
@@ -39,7 +40,7 @@ Each Session:
 ## Adding a Figure
 
 Copy `figures/TEMPLATE.md`, fill in the five sections, and add a row to
-`ROSTER.md`. See `docs/agents/domain.md` for how domain terms and ADRs are
+`LIBRARY.md`. See `docs/agents/domain.md` for how domain terms and ADRs are
 maintained in this repo.
 
 ## Tests

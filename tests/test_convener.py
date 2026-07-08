@@ -15,27 +15,27 @@ def make_figures(*names):
     ]
 
 
-def test_needs_council_is_true_on_yes_reply():
-    convener = Convener(llm=FakeLLM(["YES"]), council=[])
+def test_needs_debate_is_true_on_yes_reply():
+    convener = Convener(llm=FakeLLM(["YES"]), library=[])
 
-    assert convener.needs_council("Should I take this job?") is True
+    assert convener.needs_debate("Should I take this job?") is True
 
 
-def test_needs_council_is_false_on_no_reply():
-    convener = Convener(llm=FakeLLM(["NO"]), council=[])
+def test_needs_debate_is_false_on_no_reply():
+    convener = Convener(llm=FakeLLM(["NO"]), library=[])
 
-    assert convener.needs_council("What is the weather like?") is False
+    assert convener.needs_debate("What is the weather like?") is False
 
 
 def test_answer_directly_returns_llm_text():
-    convener = Convener(llm=FakeLLM(["It's sunny."]), council=[])
+    convener = Convener(llm=FakeLLM(["It's sunny."]), library=[])
 
     assert convener.answer_directly("What is the weather like?") == "It's sunny."
 
 
 def test_select_figures_parses_comma_separated_names():
-    council = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
-    convener = Convener(llm=FakeLLM(["Marcus Aurelius, Warren Buffett, Ray Dalio"]), council=council)
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    convener = Convener(llm=FakeLLM(["Marcus Aurelius, Warren Buffett, Ray Dalio"]), library=library)
 
     selected = convener.select_figures("Should I take this job?")
 
@@ -43,8 +43,8 @@ def test_select_figures_parses_comma_separated_names():
 
 
 def test_select_figures_tops_up_to_minimum_when_reply_is_short():
-    council = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
-    convener = Convener(llm=FakeLLM(["Marcus Aurelius"]), council=council)
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    convener = Convener(llm=FakeLLM(["Marcus Aurelius"]), library=library)
 
     selected = convener.select_figures("A narrow question")
 
@@ -53,9 +53,9 @@ def test_select_figures_tops_up_to_minimum_when_reply_is_short():
 
 
 def test_select_figures_does_not_substring_match_a_shorter_name():
-    council = make_figures("Lee", "Lee Kuan Yew", "Warren Buffett", "Ray Dalio")
+    library = make_figures("Lee", "Lee Kuan Yew", "Warren Buffett", "Ray Dalio")
     convener = Convener(
-        llm=FakeLLM(["Lee Kuan Yew, Warren Buffett, Ray Dalio"]), council=council
+        llm=FakeLLM(["Lee Kuan Yew, Warren Buffett, Ray Dalio"]), library=library
     )
 
     selected = convener.select_figures("Should I take this job?")
@@ -63,37 +63,58 @@ def test_select_figures_does_not_substring_match_a_shorter_name():
     assert [f.name for f in selected] == ["Lee Kuan Yew", "Warren Buffett", "Ray Dalio"]
 
 
-def test_choose_next_speaker_returns_none_on_end():
-    council = make_figures("Marcus Aurelius", "Warren Buffett")
-    convener = Convener(llm=FakeLLM(["END"]), council=council)
+def test_select_figures_is_constrained_to_passed_candidates_not_full_library():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    candidates = [f for f in library if f.name != "Charlie Munger"]
+    convener = Convener(llm=FakeLLM(["Charlie Munger, Marcus Aurelius"]), library=library)
 
-    assert convener.choose_next_speaker(council, "transcript") is None
+    selected = convener.select_figures("Should I take this job?", candidates=candidates)
+
+    assert "Charlie Munger" not in [f.name for f in selected]
+
+
+def test_select_figures_tops_up_from_candidates_not_full_library():
+    library = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio", "Charlie Munger")
+    candidates = make_figures("Marcus Aurelius", "Warren Buffett", "Ray Dalio")
+    convener = Convener(llm=FakeLLM(["Marcus Aurelius"]), library=library)
+
+    selected = convener.select_figures("A narrow question", candidates=candidates)
+
+    assert len(selected) == MIN_FIGURES
+    assert "Charlie Munger" not in [f.name for f in selected]
+
+
+def test_choose_next_speaker_returns_none_on_end():
+    library = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(llm=FakeLLM(["END"]), library=library)
+
+    assert convener.choose_next_speaker(library, "transcript") is None
 
 
 def test_choose_next_speaker_matches_named_figure():
-    council = make_figures("Marcus Aurelius", "Warren Buffett")
-    convener = Convener(llm=FakeLLM(["Warren Buffett"]), council=council)
+    library = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(llm=FakeLLM(["Warren Buffett"]), library=library)
 
-    speaker = convener.choose_next_speaker(council, "transcript")
+    speaker = convener.choose_next_speaker(library, "transcript")
 
     assert speaker.name == "Warren Buffett"
 
 
 def test_choose_next_speaker_does_not_substring_match_a_shorter_name():
-    council = make_figures("Lee", "Lee Kuan Yew")
-    convener = Convener(llm=FakeLLM(["Lee Kuan Yew"]), council=council)
+    library = make_figures("Lee", "Lee Kuan Yew")
+    convener = Convener(llm=FakeLLM(["Lee Kuan Yew"]), library=library)
 
-    speaker = convener.choose_next_speaker(council, "transcript")
+    speaker = convener.choose_next_speaker(library, "transcript")
 
     assert speaker.name == "Lee Kuan Yew"
 
 
 def test_choose_next_speaker_raises_when_reply_does_not_match_a_seated_figure():
-    council = make_figures("Marcus Aurelius", "Warren Buffett")
-    convener = Convener(llm=FakeLLM(["Someone Not On The Council"]), council=council)
+    library = make_figures("Marcus Aurelius", "Warren Buffett")
+    convener = Convener(llm=FakeLLM(["Someone Not On The Council"]), library=library)
 
     with pytest.raises(ValueError):
-        convener.choose_next_speaker(council, "transcript")
+        convener.choose_next_speaker(library, "transcript")
 
 
 def test_prompt_figure_sends_figures_system_prompt_and_transcript():
@@ -110,7 +131,7 @@ def test_prompt_figure_sends_figures_system_prompt_and_transcript():
             seen["tools"] = tools
             return Completion(text="reply from Marcus")
 
-    convener = Convener(llm=RecordingLLM(), council=[figure])
+    convener = Convener(llm=RecordingLLM(), library=[figure])
 
     reply = convener.prompt_figure(figure, "User: Should I take this job?")
 

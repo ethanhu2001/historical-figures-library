@@ -18,11 +18,13 @@ class FakeConvener:
         self._speaker_sequence = iter(speaker_sequence)
         self._llm = llm
         self._synthesis = synthesis
+        self.received_candidates = "not called"
 
-    def needs_council(self, question):
+    def needs_debate(self, question):
         return True
 
-    def select_figures(self, question):
+    def select_figures(self, question, candidates=None):
+        self.received_candidates = candidates
         return self.seated
 
     def choose_next_speaker(self, seated, transcript):
@@ -95,10 +97,10 @@ def test_run_records_citations_from_a_figures_turn():
         def __init__(self, speaker_sequence):
             self._speaker_sequence = iter(speaker_sequence)
 
-        def needs_council(self, question):
+        def needs_debate(self, question):
             return True
 
-        def select_figures(self, question):
+        def select_figures(self, question, candidates=None):
             return [a]
 
         def choose_next_speaker(self, seated, transcript):
@@ -134,9 +136,9 @@ def test_run_falls_back_to_first_seated_figure_when_convener_reply_does_not_deco
     assert speakers == ["User", "A", "Convener (Synthesis)"]
 
 
-def test_trivial_question_skips_council_and_returns_direct_answer():
+def test_trivial_question_skips_debate_and_returns_direct_answer():
     class DirectAnswerConvener:
-        def needs_council(self, question):
+        def needs_debate(self, question):
             return False
 
         def answer_directly(self, question):
@@ -159,6 +161,38 @@ def test_trivial_question_skips_council_and_returns_direct_answer():
     assert session.seated == []
     speakers = [t.speaker for t in session.turns]
     assert speakers == ["User", "Convener (Direct Answer)"]
+
+
+def test_pick_candidates_result_is_forwarded_to_select_figures():
+    a, b = figure("A"), figure("B")
+    convener = FakeConvener(
+        seated=[a, b],
+        speaker_sequence=[a, b, None],
+        llm=FakeLLM(["reply from A", "reply from B"]),
+    )
+    session = Session(question="Q?", convener=convener)
+
+    session.run(ask_user=lambda p: "unused", pick_candidates=lambda: [a, b])
+
+    assert convener.received_candidates == [a, b]
+
+
+def test_pick_candidates_is_not_called_for_a_trivial_question():
+    class DirectAnswerConvener:
+        def needs_debate(self, question):
+            return False
+
+        def answer_directly(self, question):
+            return "It's sunny."
+
+    session = Session(question="What's the weather like?", convener=DirectAnswerConvener())
+
+    def pick_candidates():
+        raise AssertionError("should not prompt for a Cabinet on a trivial question")
+
+    answer = session.run(ask_user=lambda p: "unused", pick_candidates=pick_candidates)
+
+    assert answer == "It's sunny."
 
 
 def test_debate_stops_at_turn_budget_even_if_convener_never_ends():

@@ -65,3 +65,81 @@ a light reword, not a rewrite.
    `MIN_FIGURES = 3` floor applies to a manual pick.
 2. CLI surface: fate of `council roster` / `ROSTER.md` under the new
    Library term, and the shape of a manual-pick flag on `council ask`.
+
+---
+
+## 2026-07-07: Resolve manual-selection design + finish the Council rename
+
+**Decision**: Resolved both items left open above.
+1. Manual pick **constrains the candidate set**, it does not bypass the
+   Convener. `Convener.select_figures(question, candidates=None)` now takes
+   an optional `candidates` param; when given, relevance judgment (and the
+   `MIN_FIGURES` top-up fallback) runs only over that narrowed pool instead
+   of `self.library`. This means a manual pick still needs to satisfy
+   `MIN_FIGURES = 3` — the same floor applies whether the pool is the full
+   Library or a user-narrowed one, since the floor is about debate dynamics
+   (enough distinct Worldviews to make a debate, not a Q&A), not about how
+   the pool was assembled.
+2. CLI surface is an **interactive picker**: `council ask` always offers a
+   numbered Library listing before the debate starts, prompting for a
+   comma-separated pick (validated to be exactly one number per Figure and
+   at least `MIN_FIGURES`) or an empty Enter to skip straight to full
+   automatic Convener selection. No separate flag-based path — one prompt
+   covers both "narrow it myself" and "let the Convener pick," so a single
+   command teaches the whole feature rather than requiring the user to
+   discover a flag.
+
+Also finished the deferred renames flagged in the 2026-07-04 entry:
+- `Convener.__init__`'s `council` param/attribute is now `library`.
+- `CONVENER_SYSTEM_PROMPT` and the prompt strings inside `select_figures` /
+  `choose_next_speaker` now say Library/Cabinet instead of Council — this
+  changes what's actually sent to the model, not just docs.
+- `Convener.needs_council` renamed to `needs_debate` — it was never really
+  asking "does this need the Council," it's asking "does this question
+  call for a debate at all," and the old name baked in the retired term.
+- `ROSTER.md` renamed to `LIBRARY.md`; `council roster` CLI command renamed
+  to `council library` to match.
+- The `council` Python package/CLI command name is still deliberately left
+  alone (brand name, per the prior entry) — only the `roster` subcommand
+  was renamed, since that one was about content, not the product name.
+
+**Why**: The interactive-picker choice (over a `--figures` flag) trades a
+little friction on every `ask` call for discoverability — with a flag,
+first-time users would never learn manual selection exists unless they read
+docs; a prompt teaches the feature by just running the command. The
+constrain-not-bypass choice keeps `select_figures`'s existing relevance +
+top-up logic as the single code path for both automatic and manual
+selection — a manual pick is just a smaller `pool` argument, not a second
+implementation to maintain and keep in sync.
+
+**What it changes**:
+- `src/council/convener.py`: `library` param/attribute, `needs_debate`
+  rename, `candidates` param on `select_figures`, prompt text.
+- `src/council/session.py`: `Session.run` takes an optional
+  `pick_candidates` callback (mirrors the existing `ask_user`/`on_turn`
+  callback pattern), called only when a debate is actually needed (i.e.
+  not for trivial questions that skip straight to `answer_directly`), and
+  its result is forwarded as `candidates` to `select_figures`.
+- `src/council/cli.py`: `_pick_candidates` implements the interactive
+  numbered picker; `council roster` renamed to `council library`.
+- `LIBRARY.md` (renamed from `ROSTER.md`), `README.md`: reflect the above.
+- `tests/test_convener.py`, `tests/test_session.py`,
+  `tests/test_transcript.py`, `tests/test_figure.py`: updated for the
+  renames, plus new coverage for `candidates` constraining `select_figures`
+  and for `pick_candidates` being forwarded / skipped correctly.
+  `test_figure.py`'s figure-count assertion was hardcoded at 7 and started
+  failing as new Figure files landed from the content-expansion thread
+  proceeding in parallel — replaced with a count derived from
+  `figures/*.md` on disk so it no longer needs updating as the Library
+  grows.
+
+**Not yet done**:
+- No CLI-level test exists for `_pick_candidates` (exercised manually and
+  via `Session`/`Convener` unit tests instead) — this repo has no
+  `test_cli.py` precedent yet; adding one is a reasonable follow-up once
+  the CLI surface has more than two commands.
+- User story 9 ("clear whether a Session used hand-picked or automatic
+  selection") is only satisfied at the point of picking — `_pick_candidates`
+  echoes which mode was chosen before the debate starts, but nothing in the
+  transcript or Synthesis records it after the fact. Revisit if transcripts
+  need to be self-describing later.

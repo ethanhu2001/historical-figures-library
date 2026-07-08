@@ -1,4 +1,4 @@
-Status: needs-triage
+Status: ready-for-agent
 
 # Figure library expansion + user-facing selection
 
@@ -38,12 +38,33 @@ automatic selection.
 
 ## Implementation Decisions
 
-Open — flagged for a design pass before this is `ready-for-agent`:
+Resolved (see `DECISIONS.md` for full reasoning):
 
-- **"Council" vs "Library" terminology**: `CONTEXT.md` currently defines **Council** as "the full assembly of Figure agents available to participate in debates... membership is curated." Growing to a large library changes that meaning. Needs a domain-modeling pass (this repo has a `domain-modeling` / `ubiquitous-language` skill for exactly this) to decide: does "Council" become the large pool, with a new term for a per-Session subset? Or does "Library" become the large pool and "Council" stays the smaller curated/eligible set? This affects `ROSTER.md`, `CONTEXT.md`, and `docs/adr/0001-convener-orchestrated-debate.md`.
-- **Interaction with ADR-0001**: the Convener currently auto-selects ≥3 relevant Figures from the whole roster (`Convener.select_figures` in `src/council/convener.py`). A manual selection layer needs a decision on whether it fully replaces that call for a given Session, constrains its input set, or is offered as an alternate path — this is a real architectural choice, not a detail.
-- **CLI surface**: likely a `council library` (or renamed) listing command distinct from the existing `council roster`, plus a way to pass explicit Figure choices into `council ask` (flag vs. interactive picker) — parallels the profile-selection UI being designed in the companion `user-profiles` PRD, and both may want the same picker pattern.
-- **Content sourcing for new Figures**: needs a decision on process for drafting each new Figure's Worldview/Biography/Known positions accurately (research process, review step) versus just generating plausible-sounding content — accuracy matters more here than for the selection-layer plumbing.
+- **"Council" vs "Library" terminology** (2026-07-04): Council is retired.
+  **Library** is the full pool of every available Figure; **Cabinet** is the
+  ≥3 Figures seated for one Session, drawn from the Library. `CONTEXT.md`,
+  `README.md`, `figures/TEMPLATE.md`, `ROSTER.md` (renamed `LIBRARY.md`),
+  and all Convener-facing code/prompts have been updated accordingly.
+- **Interaction with ADR-0001** (2026-07-07): manual selection **constrains
+  the candidate set** passed to `Convener.select_figures` rather than
+  bypassing it or existing as a fully separate path — the Convener's
+  existing relevance-judgment and `MIN_FIGURES` top-up logic runs unchanged
+  over whatever pool it's given. `MIN_FIGURES = 3` applies to a manual pick
+  the same as to automatic selection.
+- **CLI surface** (2026-07-07): `council ask` always offers an interactive
+  numbered Library picker before the debate starts (pick ≥3 by number, or
+  press Enter to let the Convener auto-select from the full Library). No
+  separate flag. `council roster` renamed to `council library`.
+
+Still open:
+
+- **Content sourcing for new Figures**: needs a decision on process for
+  drafting each new Figure's Worldview/Biography/Known positions accurately
+  (research process, review step) versus just generating plausible-sounding
+  content — accuracy matters more here than for the selection-layer
+  plumbing. (Content drafting is already underway in parallel — see
+  `LIBRARY.md` for the current roster — but this process question is not
+  yet formally decided.)
 
 ## Testing Decisions
 

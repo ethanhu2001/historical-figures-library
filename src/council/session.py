@@ -19,6 +19,7 @@ CLARIFYING_QUESTION_RE = re.compile(
 
 AskUser = Callable[[str], str]
 OnTurn = Callable[[str, str], None]
+PickCandidates = Callable[[], "list[Figure] | None"]
 
 
 @dataclass
@@ -38,15 +39,21 @@ class Session:
     def transcript_text(self) -> str:
         return "\n\n".join(f"{t.speaker}: {t.text}" for t in self.turns)
 
-    def run(self, ask_user: AskUser, on_turn: OnTurn | None = None) -> str:
+    def run(
+        self,
+        ask_user: AskUser,
+        on_turn: OnTurn | None = None,
+        pick_candidates: PickCandidates | None = None,
+    ) -> str:
         self._record("User", self.question, on_turn)
 
-        if not self.convener.needs_council(self.question):
+        if not self.convener.needs_debate(self.question):
             answer = self.convener.answer_directly(self.question)
             self._record("Convener (Direct Answer)", answer, on_turn=None)
             return answer
 
-        self.seated = self.convener.select_figures(self.question)
+        candidates = pick_candidates() if pick_candidates else None
+        self.seated = self.convener.select_figures(self.question, candidates=candidates)
 
         max_turns = ROUNDS_PER_FIGURE * len(self.seated)
         debate_turns = 0

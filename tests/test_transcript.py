@@ -7,7 +7,7 @@ from council.transcript import save_transcript
 
 
 def test_save_transcript_renders_citations_under_a_turn(tmp_path):
-    session = Session(question="Q?", convener=Convener(llm=None, council=[]))
+    session = Session(question="Q?", convener=Convener(llm=None, library=[]))
     session.turns = [
         Turn(
             speaker="A",

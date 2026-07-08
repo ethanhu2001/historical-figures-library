@@ -15,9 +15,9 @@ WEB_SEARCH_TOOL = {
     "max_uses": MAX_SEARCHES_PER_TURN,
 }
 
-CONVENER_SYSTEM_PROMPT = """You are the Convener of a Council of historical figures. \
+CONVENER_SYSTEM_PROMPT = """You are the Convener, drawing on a Library of historical figures. \
 You do not argue a Worldview of your own — your job is to orchestrate the debate: \
-choose which Council members are relevant to a question, decide who speaks next and \
+choose which Figures form the Cabinet for a question, decide who speaks next and \
 why, judge when a debate has run its course, and write the closing Synthesis. On \
 factual or logical disputes, state plainly which claims held up under challenge. On \
 genuinely value-laden questions, do not force a winner — present the strongest \
@@ -25,9 +25,9 @@ surviving form of each side."""
 
 
 class Convener:
-    def __init__(self, llm: LLMClient, council: list[Figure]) -> None:
+    def __init__(self, llm: LLMClient, library: list[Figure]) -> None:
         self.llm = llm
-        self.council = council
+        self.library = library
 
     def _ask(
         self, system: str, prompt: str, max_tokens: int, tools: list[dict] | None = None
@@ -53,7 +53,7 @@ class Convener:
             tools=[WEB_SEARCH_TOOL],
         )
 
-    def needs_council(self, question: str) -> bool:
+    def needs_debate(self, question: str) -> bool:
         prompt = (
             f"Question: {question}\n\n"
             "Does this genuinely call for a debate among historical figures with "
@@ -75,33 +75,34 @@ class Convener:
             max_tokens=500,
         ).text
 
-    def select_figures(self, question: str) -> list[Figure]:
-        roster_desc = "\n".join(
-            f"- {f.name}: {f.worldview.splitlines()[0]}" for f in self.council
-        )
+    def select_figures(
+        self, question: str, candidates: list[Figure] | None = None
+    ) -> list[Figure]:
+        pool = self.library if candidates is None else candidates
+        roster_desc = "\n".join(f"- {f.name}: {f.worldview.splitlines()[0]}" for f in pool)
         prompt = (
             f"Question: {question}\n\n"
-            f"Council roster:\n{roster_desc}\n\n"
-            f"Select at least {MIN_FIGURES} Council members whose Worldview is "
+            f"Library:\n{roster_desc}\n\n"
+            f"Select at least {MIN_FIGURES} Figures to form a Cabinet whose Worldview is "
             "genuinely relevant to this question. Reply with ONLY a comma-separated "
             "list of their exact names, nothing else."
         )
         reply = self._ask(system=CONVENER_SYSTEM_PROMPT, prompt=prompt, max_tokens=200).text
-        by_name = _figures_by_name(self.council)
+        by_name = _figures_by_name(pool)
         selected = []
         for token in reply.split(","):
             figure = by_name.get(token.strip().casefold())
             if figure and figure not in selected:
                 selected.append(figure)
         if len(selected) < MIN_FIGURES:
-            remaining = [f for f in self.council if f not in selected]
+            remaining = [f for f in pool if f not in selected]
             selected += remaining[: MIN_FIGURES - len(selected)]
         return selected
 
     def choose_next_speaker(self, seated: list[Figure], transcript: str) -> Figure | None:
         roster_desc = ", ".join(f.name for f in seated)
         prompt = (
-            f"Seated Council members: {roster_desc}\n\n"
+            f"Seated Cabinet: {roster_desc}\n\n"
             f"{_transcript_block(transcript)}"
             "Who should speak next? If the debate has run its course, reply with "
             "exactly END instead of a name. Reply with ONLY the figure's exact "

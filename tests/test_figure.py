@@ -13,7 +13,8 @@ def test_loads_all_figures_excluding_template():
     figures = load_figures(FIGURES_DIR)
     slugs = {f.slug for f in figures}
     assert "TEMPLATE" not in slugs
-    assert len(figures) == 7
+    md_files_excluding_template = [p for p in FIGURES_DIR.glob("*.md") if p.stem != "TEMPLATE"]
+    assert len(figures) == len(md_files_excluding_template)
 
 
 def test_each_figure_has_worldview_and_full_system_prompt():
